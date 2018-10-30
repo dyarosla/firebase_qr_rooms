@@ -1,0 +1,62 @@
+<html>
+<body>
+	<div id="qrrooms"></div>
+    <br>
+    <b>--------</b>
+    <b>Users</b>
+    <div id="userlist"></div>
+</body>
+</html>
+<script src="js/qrcodejs/qrcode.min.js"></script>
+<script src="js/firebaseConfig.js"></script>
+<script src="js/MultiplayerGameIntf.js"></script>
+<script src="js/QRRooms.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.5.5/firebase.js"></script>
+
+<script>
+
+var userListElem = document.getElementById('userlist');
+var userDict = {};
+
+var addUser = function(userid){
+    var userElem = document.createElement('div');
+    userElem.innerHTML = userid;
+    userListElem.appendChild(userElem);
+
+    userDict[userid] = userElem;
+}
+
+var removeUser = function(userid){
+    var userElem = userDict[userid];
+    userListElem.removeChild(userElem);
+
+    delete userDict[userid];
+}
+
+var inputUser = function(userid, input){
+    var userElem = userDict[userid];
+    userElem.innerHTML = userid +" : "+input;
+}
+
+firebase.initializeApp(firebaseConfig);
+/*{
+    "apiKey": "AIzaSyAUtL5QdE5fjKSpyQJyEjRCzZo--7VpL1A",
+    "authDomain": "roomqrs.firebaseapp.com",
+    "databaseURL": "https://roomqrs.firebaseio.com",
+    "projectId": "roomqrs",
+    "storageBucket": "roomqrs.appspot.com",
+    "messagingSenderId": "1042889955922"
+});
+*/
+
+var gameIntf = new MultiplayerGameIntf({addCB:addUser,
+                                        removeCB:removeUser,
+                                        inputCB:inputUser});
+
+var qrRooms = new QRRooms(firebase, gameIntf,
+                          document.getElementById('qrrooms'),
+                          QRCode,
+                          'playdemo.html');
+
+qrRooms.start();
+</script>

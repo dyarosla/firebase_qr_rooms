@@ -1,0 +1,55 @@
+<html>
+<body style="margin:0">
+	<b>User</b>:<div id="uid">None</div>
+	<br>
+	<b>Room</b>:<div id="roomid">None</div>
+	<br>
+
+    <div style="text-align:center">
+        <input type="text" id="inputDemo" style="font-size:50; text-align:center"></input>
+        <br>
+        <br>
+        <button id="send" style="font-size:50">SEND</input>
+    </div>
+</body>
+</html>
+<script src="https://www.gstatic.com/firebasejs/5.5.5/firebase.js"></script>
+<script src="js/RoomUser.js"></script>
+<script>
+firebase.initializeApp({
+    "apiKey": "AIzaSyAUtL5QdE5fjKSpyQJyEjRCzZo--7VpL1A",
+    "authDomain": "roomqrs.firebaseapp.com",
+    "databaseURL": "https://roomqrs.firebaseio.com",
+    "projectId": "roomqrs",
+    "storageBucket": "roomqrs.appspot.com",
+    "messagingSenderId": "1042889955922"
+});
+
+var showUser = function(userName){
+    var uidElem = document.getElementById('uid');
+    uidElem.innerHTML = userName !== null?userName:"";
+}
+
+var showRoom = function(roomName){
+    var roomElem = document.getElementById('roomid');
+    roomElem.innerHTML = roomName !== null?roomName:"";
+}
+
+var roomUser = new RoomUser(firebase, {userCB:showUser, roomCB:showRoom});
+
+var inputBox = document.getElementById('inputDemo');
+var sendButton = document.getElementById('send');
+
+var sendInput = function(){
+    roomUser.updateInput(inputBox.value);
+    inputBox.value = "";
+}
+
+inputBox.onkeypress = function(e){
+    if(e.keyCode == 13){
+        sendInput();
+    }
+}
+
+sendButton.onclick = sendInput;
+</script>

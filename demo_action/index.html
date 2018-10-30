@@ -1,0 +1,244 @@
+<html>
+<body>
+	<div>
+		<div id="qrrooms"></div>
+		<br>
+		<b>--------</b>
+		<b>Users</b>
+		<div id="userlist"></div>
+	</div>
+	<div id="timer" style="width:100%; text-align:center; padding:10; font-size:1.2em; font-weight:400"></div>
+    <canvas id="canvas" width="600" height ="400" style="border:1px solid black;"></canvas>
+</body>
+</html>
+<script src="js/qrcodejs/qrcode.min.js"></script>
+<script src="js/MultiplayerGameIntf.js"></script>
+<script src="js/QRRooms.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.5.5/firebase.js"></script>
+
+<script>
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+var charDict = {};
+
+class Char {
+	constructor(){
+		this.x = Math.random()*400+100;
+		this.y = Math.random()*200+100;
+		this.color = getRandomColor();
+		this.input = null;
+		this.size = 30;
+		this.score = 0;
+	}
+}
+
+var createChar = function(id){
+    charDict[id] = new Char();
+}
+
+var removeChar = function(id){
+	delete charDict[id];
+}
+
+var updateCharInput = function(id, input){
+	charDict[id].input = input;
+}
+
+var updateCharScore = function(id, score){
+	charDict[id].score = score;
+}
+
+var updateCharSize = function(id, size){
+	charDict[id].size = size;
+}
+
+var userListElem = document.getElementById('userlist');
+var userDict = {};
+
+var qrRooms = null;
+
+var addUser = function(userid){
+    var userElem = document.createElement('div');
+    userListElem.appendChild(userElem);
+
+	var userInfo = document.createElement('div');
+    userInfo.innerHTML = userid;
+	userElem.appendChild(userInfo);
+
+    createChar(userid);
+	userInfo.style.backgroundColor = charDict[userid].color+"";
+
+	if(qrRooms !== null){
+		qrRooms.setUserData(userid, "color", charDict[userid].color);
+	}
+
+	userDict[userid] = {elem:userElem, info:userInfo};
+}
+
+var removeUser = function(userid){
+    var userElem = userDict[userid];
+    userListElem.removeChild(userElem.elem);
+
+    removeChar(userid);
+    delete userDict[userid];
+}
+
+var inputUser = function(userid, input){
+	updateCharInput(userid, input);
+}
+
+var playing = false;
+var timer = 0;
+
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+var starttime = null;
+var introtime = 5;
+var roundtime = 30;
+var maxtime = introtime;
+
+var collectables = [];
+
+var createCollectable = function(){
+	collectables.push({x:Math.random()*600, y:Math.random()*400});
+}
+
+var removeCollectable = function(c){
+	collectables.splice(collectables.indexOf(c), 1);
+}
+
+var getCharScore = function(userid){
+	return charDict[userid].score;
+}
+
+var setCharScore = function(userid, score){
+	updateCharScore(userid, score);
+}
+
+var modifyCharScore = function(userid, amt){
+	setCharScore(userid, getCharScore(userid) + amt);
+}
+
+function startRound(){
+	Object.keys(charDict).forEach((id) => {
+		updateCharScore(id, 0);
+		updateCharSize(id, 30);
+	});
+	for(var i = 0; i < 7; i++){
+		createCollectable();
+	}
+}
+
+function clearRound(){
+	collectables.splice(0, collectables.length-1);
+}
+
+var timerElem = document.getElementById('timer');
+function update(timestamp) {
+    if(starttime == null){
+		starttime = timestamp;
+	}
+
+	ctx.clearRect(0,0,canvas.width, canvas.height);
+
+	if(Object.keys(userDict).length == 0){
+		if(playing){
+			clearRound();
+			playing = false;
+		}
+		timerElem.innerHTML = "Waiting on players...";
+		starttime = timestamp;
+		maxtime = introtime;
+		window.requestAnimationFrame(update);
+		return;
+	}
+
+	timer = maxtime - Math.floor((timestamp-starttime)/1000);
+	if(timer <= 0){
+		playing = !playing;
+		//showWinner();
+		starttime = timestamp;
+		maxtime = playing?roundtime:introtime;
+		if(playing){
+			clearRound();
+			startRound();
+		}
+		timer = maxtime;
+	}
+
+	timerElem.innerHTML = !playing?"Next round in: "+timer:timer;
+
+	var collectableSize = 15;
+	if(playing){
+
+		Object.keys(charDict).forEach((id) => {
+			var char = charDict[id];
+			if(char.input == "left"){
+				char.x -= 5;
+			} else if(char.input == "right"){
+				char.x += 5;
+			} else if(char.input == "up"){
+				char.y -= 5;
+			} else if(char.input == "down"){
+				char.y += 5;
+			}
+			if(char.x < 0) char.x = 600;
+			if(char.y < 0) char.y = 400;
+			if(char.x > 600) char.x = 0;
+			if(char.y > 400) char.y = 0;
+			ctx.fillStyle = char.color;
+			var charSize = char.size;
+			ctx.fillRect(char.x - charSize/2, char.y - charSize/2, charSize, charSize);
+
+			collectables.forEach((collectable) => {
+				var xd = char.x - collectable.x;
+				var yd = char.y - collectable.y;
+				if(Math.abs(xd) < charSize/2 + collectableSize/2 &&
+					Math.abs(yd) < charSize/2 + collectableSize/2){
+					modifyCharScore(id, 10);
+					updateCharSize(id, charSize + 3);
+					removeCollectable(collectable);
+					createCollectable();
+				}
+			});
+
+			var userElem = userDict[id];
+			userElem.info.innerHTML = id +" : "+char.score;
+		});
+
+		ctx.fillStyle = 'yellow';
+		collectables.forEach((collectable) => {
+			ctx.fillRect(collectable.x - collectableSize/2, collectable.y - collectableSize/2, collectableSize, collectableSize);
+		});
+	}
+
+    window.requestAnimationFrame(update);
+}
+window.requestAnimationFrame(update);
+
+firebase.initializeApp({
+    "apiKey": "AIzaSyAUtL5QdE5fjKSpyQJyEjRCzZo--7VpL1A",
+    "authDomain": "roomqrs.firebaseapp.com",
+    "databaseURL": "https://roomqrs.firebaseio.com",
+    "projectId": "roomqrs",
+    "storageBucket": "roomqrs.appspot.com",
+    "messagingSenderId": "1042889955922"
+});
+
+var gameIntf = new MultiplayerGameIntf({addCB:addUser,
+                                        removeCB:removeUser,
+                                        inputCB:inputUser});
+
+qrRooms = new QRRooms(firebase, gameIntf,
+                          document.getElementById('qrrooms'),
+                          QRCode,
+                          'playaction.html');
+qrRooms.start();
+</script>

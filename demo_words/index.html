@@ -1,0 +1,279 @@
+<html>
+<body>
+	<div style="position:absolute" id="qrrooms"></div>
+<br>
+<br>
+<br>
+<div id="timer" style="width:100%; text-align:center; padding:10; font-size:1.2em; font-family:menlo; font-weight:400"></div>
+<div id="baseword" style="width:100%; text-align:center; padding:10; font-size:1.6em; font-family:menlo; font-weight:400"></div>
+<div style="text-align:center">
+<div style="height:1px;width:auto;display:inline-block;text-align:left">
+	<div id="words0" style="float:left"></div>
+	<div style="float:left; width:30px; height:1px"></div>
+	<div id="words1" style="float:left"></div>
+	<div style="float:left; width:30px; height:1px"></div>
+	<div id="words2" style="float:left"></div>
+	<div style="float:left; width:30px; height:1px"></div>
+	<div id="words3" style="float:left"></div>
+	<div style="float:left; width:30px; height:1px"></div>
+	<div id="words4" style="float:left"></div>
+	<div style="clear:both"></div>
+	<br>
+	<br>
+<div>
+	<b id="usermsg"></b>
+	<br>
+	<div id="userslist">
+	</div>
+	<br>
+	<br>
+</div>
+</div>
+</div>
+</body>
+</html>
+<script src="js/qrcodejs/qrcode.min.js"></script>
+<script src="js/MultiplayerGameIntf.js"></script>
+<script src="js/QRRooms.js"></script>
+<script src="https://www.gstatic.com/firebasejs/5.5.5/firebase.js"></script>
+<script>
+String.prototype.shuffle = function () {
+    var a = this.split(""),
+        n = a.length;
+
+    for(var i = n - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+    }
+    return a.join("");
+}
+
+var longWords;
+
+var currWords = [];
+var wordElems = [];
+var foundWords = [];
+
+var playing = false;
+var starttime = 0;
+
+var qrRooms;
+
+var startRound = function(){
+    var idx = Math.floor(Math.random()*longWords.length);
+    var word = longWords[idx];
+    var baseWordElem = document.getElementById('baseword');
+    var shuffled=word.word.shuffle();
+    baseWordElem.innerHTML = shuffled;
+
+    // save shuffled word
+    qrRooms.setRoomData("word", shuffled);
+
+    currWords = word.scrambles.slice();
+    currWords.sort();
+    currWords.sort(function(a, b){
+      return b.length - a.length;
+    });
+    //console.log("words: "+currWords);
+    foundWords = [];
+    wordElems = [];
+
+    var list0 = currWords.slice(0,6);
+    var list1 = currWords.slice(6,12);
+    var list2 = currWords.slice(12,18);
+    var list3 = currWords.slice(18,24);
+    var list4 = currWords.slice(24,30);
+
+    Object.keys(userDict).map(function(key, value){
+        userDict[key].score = 0;
+        userDict[key].elem.innerHTML = key+ ": "+0;
+    });
+
+    var showList = function(elem, list){
+        var words = list;
+        words.forEach(function(word){
+            var wordElem = document.createElement('p');
+            var str = "";
+            for(var i = 0; i < word.length; i++){
+                str+="*";
+            }
+            wordElem.innerHTML = str;
+            elem.appendChild(wordElem);
+            wordElems.push({elem:elem, wordElem:wordElem});
+        });
+    };
+
+    var words0Elem = document.getElementById('words0');
+    var words1Elem = document.getElementById('words1');
+    var words2Elem = document.getElementById('words2');
+    var words3Elem = document.getElementById('words3');
+    var words4Elem = document.getElementById('words4');
+
+    showList(words0Elem, list0);
+    showList(words1Elem, list1);
+    showList(words2Elem, list2);
+    showList(words3Elem, list3);
+    showList(words4Elem, list4);
+}
+
+var findWord = function(word){
+    var idx = currWords.indexOf(word);
+    if(idx == -1) return;
+    wordElems[idx].wordElem.innerHTML=currWords[idx];
+    foundWords.push(word);
+}
+
+var existsWord = function(word){
+    return currWords.indexOf(word) != -1 &&
+            foundWords.indexOf(word) == -1;
+}
+
+var userFindWord = function(name, word) {
+    if(word == null) return;
+    if(word == "") return;
+    word = word.toUpperCase();
+    //console.log(name +" submits "+word);
+    if(userDict[name] == null) return;
+    if(existsWord(word)){
+        findWord(word);
+        var score = userDict[name].score + word.length;
+        userDict[name].score = score;
+        userDict[name].elem.innerHTML = name+ ": "+score;
+    }
+}	
+
+var showAllWords = function(){
+    for(var i = 0; i < currWords.length; i ++){
+        wordElems[i].wordElem.innerHTML=currWords[i];
+    }
+    foundWords = currWords.slice(0, currWords.length);
+}
+
+var clearRound = function(){
+    wordElems.forEach(function(wordElem){
+        wordElem.wordElem.parentNode.removeChild(wordElem.wordElem);
+    });
+    wordElems.splice(0, wordElems.length);
+    currWords.splice(0, currWords.length);
+}
+
+var startGame = function(){
+    //console.log("startgame");
+    var timer = 0;
+    var introtime = 10;
+    var roundtime = 99;
+    var maxtime = introtime;
+    var timerElem = document.getElementById('timer');
+    var baseWordElem = document.getElementById('baseword');
+
+    var chars = [];
+
+    function updateGame(timestamp) {
+        if(starttime == null){
+            starttime = timestamp;
+        }
+
+        if(Object.keys(userDict).length == 0){
+            if(playing){
+                clearRound();
+                playing = false;
+            }
+            baseWordElem.innerHTML = "";
+            timerElem.innerHTML = "";
+            starttime = timestamp;
+            maxtime = introtime;
+            window.requestAnimationFrame(updateGame);
+            return;
+        }
+
+        timer = maxtime - Math.floor((timestamp-starttime)/1000);
+        if(timer <= 0 || (playing && foundWords.length == currWords.length)){
+            playing = !playing;
+            showAllWords();
+            starttime = timestamp;
+            maxtime = playing?roundtime:introtime;
+            if(playing){
+                clearRound();
+                startRound();
+            }
+            timer = maxtime;
+        }
+
+        timerElem.innerHTML = !playing?"Next round in: "+timer:timer;
+        window.requestAnimationFrame(updateGame);
+    }
+
+    starttime = null;
+    window.requestAnimationFrame(updateGame);
+}
+
+var setupDict = function(text){
+    longWords = JSON.parse(text);
+    //console.log(longWords);
+    startGame();
+}
+
+function readTextFile(file, cb)
+{
+    var rawFile = new XMLHttpRequest();
+    rawFile.open("GET", file, false);
+    rawFile.onreadystatechange = function ()
+    {
+        if(rawFile.readyState === 4)
+        {
+            if(rawFile.status === 200 || rawFile.status == 0)
+            {
+                var allText = rawFile.responseText;
+                cb(allText);
+            }
+        }
+    }
+    rawFile.send(null);
+}
+
+readTextFile("./wordSets.txt", setupDict);
+
+document.getElementById("usermsg").innerHTML = "Waiting for users...";
+
+var userDict = {};
+
+var userElem = document.getElementById("userslist");
+var addUser = function(name){
+    removeUser(name);
+    var userRow = document.createElement('div');
+    userRow.innerHTML = name + ": "+0;
+    userElem.appendChild(userRow);
+    userDict[name] = {elem:userRow, score:0};
+    document.getElementById("usermsg").innerHTML = "Users";
+}
+
+var removeUser = function(name){
+    if(userDict[name] == null) return;
+    var elem = userDict[name].elem;
+    userElem.removeChild(elem);
+    delete userDict[name];
+    if(Object.keys(userDict).length == 0){
+        document.getElementById("usermsg").innerHTML = "Waiting for users...";
+    }
+}
+
+firebase.initializeApp({
+    "apiKey": "AIzaSyAUtL5QdE5fjKSpyQJyEjRCzZo--7VpL1A",
+    "authDomain": "roomqrs.firebaseapp.com",
+    "databaseURL": "https://roomqrs.firebaseio.com",
+    "projectId": "roomqrs",
+    "storageBucket": "roomqrs.appspot.com",
+    "messagingSenderId": "1042889955922"
+});
+
+var gameIntf = new MultiplayerGameIntf({addCB:addUser, removeCB:removeUser,
+                                    inputCB:userFindWord});
+
+qrRooms = new QRRooms(firebase, gameIntf,
+                          document.getElementById('qrrooms'),
+                          QRCode,
+                          'playwords.html');
+qrRooms.start();
+</script>

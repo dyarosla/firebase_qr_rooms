@@ -1,0 +1,33 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms":{
+      ".read": true,
+      "$room":{
+        ".write":"root.child('rooms/'+$room+'/owner').val() === auth.uid",
+      	"owner":{
+        	".write":"!data.exists() && newData.val() === auth.uid"
+      	},
+        "users":{
+          "$uid":{
+            ".write":"$uid === auth.uid && !newData.exists()",
+            "input":{
+              ".validate":"root.child('rooms/'+$room).exists()",
+              ".write":"$uid === auth.uid"
+            }
+          }
+        },
+        "data":{
+          ".write":"root.child('rooms/'+$room+'/owner').val() === auth.uid"
+        }
+      }
+    },
+    "user_room":{
+      "$uid":{
+        ".write":"$uid === auth.uid",
+        ".read":"$uid === auth.uid"
+      }
+    }
+  }
+}

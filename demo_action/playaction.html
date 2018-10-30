@@ -1,0 +1,215 @@
+<html>
+<body style="margin:0">
+    <canvas id="canvas" style="position:absolute; display:block;
+						width:calc(min(100vw, 100vh));
+						height:calc(min(100vw,  100vh));
+						left:0; right:0; margin-left:auto; margin-right:auto"></canvas>
+	<b>User</b>:<div id="uid">None</div>
+	<br>
+	<b>Room</b>:<div id="roomid">None</div>
+	<br>
+</body>
+</html>
+<script src="https://www.gstatic.com/firebasejs/5.5.5/firebase.js"></script>
+<script src="js/RoomUser.js"></script>
+<script>
+firebase.initializeApp({
+    "apiKey": "AIzaSyAUtL5QdE5fjKSpyQJyEjRCzZo--7VpL1A",
+    "authDomain": "roomqrs.firebaseapp.com",
+    "databaseURL": "https://roomqrs.firebaseio.com",
+    "projectId": "roomqrs",
+    "storageBucket": "roomqrs.appspot.com",
+    "messagingSenderId": "1042889955922"
+});
+
+var myColor = null;
+
+var showUser = function(userName){
+    var uidElem = document.getElementById('uid');
+    uidElem.innerHTML = userName !== null?userName:"";
+}
+
+var showRoom = function(roomName){
+    var roomElem = document.getElementById('roomid');
+    roomElem.innerHTML = roomName !== null?roomName:"";
+}
+
+var showData = function(data){
+	if(data === null) return;
+	console.log(data);
+	var colorData = data['color'];
+	if(colorData === undefined) return;
+	myColor = colorData;
+}
+
+var roomUser = new RoomUser(firebase, {userCB:showUser,
+									   roomCB:showRoom,
+									   userDataCB:showData});
+
+var loc = null;
+var down = false;
+
+var press = function(x, y){
+    if(!down) return;
+    loc = {x, y};
+}
+
+var release = function(){
+    loc = null;
+    down = false;
+}
+
+canvas.addEventListener('touchstart', function(evt) {
+	down = true;
+	var touchX = evt.touches[0].clientX;
+	var touchY = evt.touches[0].clientY;
+	var rect = evt.target.getBoundingClientRect();
+	press(touchX-rect.left, touchY-rect.top);
+	evt.preventDefault();
+});
+canvas.addEventListener('touchmove', function(evt) {
+	var touchX = evt.touches[0].clientX;
+	var touchY = evt.touches[0].clientY;
+	var rect = evt.target.getBoundingClientRect();
+	press(touchX-rect.left, touchY-rect.top);
+	evt.preventDefault();
+});
+canvas.addEventListener('touchend', function(evt) {
+	release();
+	evt.preventDefault();
+});
+
+canvas.addEventListener('mousedown', function(evt) {
+	down = true;
+	var mouseX = evt.clientX;
+	var mouseY = evt.clientY;
+	var rect = evt.target.getBoundingClientRect();
+	press(mouseX-rect.left, mouseY-rect.top);
+	evt.preventDefault();
+});
+
+canvas.addEventListener('mousemove', function(evt) {
+	var mouseX = evt.clientX;
+	var mouseY = evt.clientY;
+	var rect = evt.target.getBoundingClientRect();
+	press(mouseX-rect.left, mouseY-rect.top);
+	evt.preventDefault();
+});
+
+canvas.addEventListener('mouseup', function(evt) {
+	release();
+	evt.preventDefault();
+});
+
+var ctx = canvas.getContext('2d');
+function update(timestamp) {
+	var size = Math.min(innerWidth, innerHeight);
+    if(canvas.width !== size || canvas.height !== size){
+        canvas.width = size;
+        canvas.height = size;
+		canvas.style.width = size;
+		canvas.style.height = size;
+    }
+    var canvasW = canvas.width;
+    var canvasH = canvas.height;
+    ctx.clearRect(0, 0, canvasW, canvasH);
+
+	/*
+     _____________________0
+	|					 |
+	|		   .         |
+	|		 .   .       |
+	|	   .       .     |
+	|	 .           .   |
+	|	   .       .     |
+	|		 .   .       |
+	|		   .         |
+	|____________________|1
+    0                    1
+	*/
+
+    var top = [[.5, .1], [.3, .3], [.7, .3]];
+    var bottom = [[.5, .9], [.3, .7], [.7, .7]];
+    var left = [[.1, .5], [.3, .7], [.3, .3]];
+    var right = [[.9, .5], [.7, .3], [.7, .7]];
+
+	var tris = [top, bottom, left, right];
+
+	ctx.fillStyle = '#cccccc';
+	var drawTri = tri => {
+		ctx.beginPath();
+		ctx.moveTo(tri[2][0]*canvasW, tri[2][1]*canvasH);
+		tri.forEach(loc => {
+			ctx.lineTo(loc[0]*canvasW, loc[1]*canvasH);
+		});
+		ctx.closePath();
+		ctx.fill();
+	};
+
+	tris.forEach(drawTri);
+
+    var input = "none";
+    if(loc != null){
+		var ptTop = [.5, 0];
+		var ptBottom = [.5, 1];
+		var ptLeft = [0, .5];
+		var ptRight = [1, .5];
+		
+		var pts = [ptTop, ptBottom, ptLeft, ptRight];
+		var minIdx = -1;
+		var minDist = 0;
+
+		var canvasX = loc.x/canvasW;
+		var canvasY = loc.y/canvasH;
+
+		var xc = .5 - canvasX;
+		var yc = .5 - canvasY;
+		if(xc*xc + yc*yc < .002){
+			// centered, treat as none
+			input = "none";
+		} else {
+			var distToPt = (idx, pt) => {
+				var xd = pt[0] - canvasX;
+				var yd = pt[1] - canvasY;
+				var dist = xd*xd+yd*yd; // don't need to sqrt to compare
+				if(minIdx == -1 || dist < minDist){
+					minIdx = idx;
+					minDist = dist;
+				}
+			}
+
+			for(var i = 0; i < pts.length; i ++){
+				distToPt(i, pts[i]);
+			}
+
+			ctx.fillStyle = '#00ff00';
+			switch(minIdx){
+				case 0: input = "up"; break;
+				case 1:	input = "down"; break;
+				case 2: input = "left"; break;
+				case 3: input = "right"; break;
+			}
+			drawTri(tris[minIdx]);
+		}
+
+	} else {
+		input = "none";
+	}
+
+	if(myColor !== null){
+		ctx.fillStyle = myColor;
+		ctx.beginPath();
+		ctx.moveTo(canvasW/2, canvasH/2);
+		ctx.arc(canvasW/2, canvasH/2, canvasW/15, 0, 2*Math.PI);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+    // submit the input data
+    roomUser.updateInput(input);
+
+    window.requestAnimationFrame(update);
+}
+
+window.requestAnimationFrame(update);
+</script>
