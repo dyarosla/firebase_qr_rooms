@@ -2,6 +2,8 @@
 
 This repo provides a sample framework within which you can create multiplayer games. Games run on one device and other users can join the game by scanning a QR code with their own device.
 
+[![Demo Video](https://dyarosla.github.io/firebase_qr_rooms/demo_action/vid/demo.gif)](https://youtu.be/NG-MByE87HU)
+
 # Demos:
 
 Live examples:
