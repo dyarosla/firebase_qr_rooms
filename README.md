@@ -6,14 +6,12 @@ This repo provides a sample framework within which you can create multiplayer ga
 
 Live examples:
 
-[**demo_users**](https://dyarosla.github.io/firebase_qr_rooms/demo_users/): Basic sample of creating a room and having users join/leave
+[**demo_users**](https://dyarosla.github.io/firebase_qr_rooms/demo_users/): Basic sample of creating a room and having users join/leave.
 
 
-[**demo_words**](https://dyarosla.github.io/firebase_qr_rooms/demo_words/): Word-based word-find game
-https://dyarosla.github.io/firebase_qr_rooms/demo_words/
+[**demo_words**](https://dyarosla.github.io/firebase_qr_rooms/demo_words/): Word-based word-find game.
 
-[**demo_action**](https://dyarosla.github.io/firebase_qr_rooms/demo_action/): Action-based collecting-coins game
-https://dyarosla.github.io/firebase_qr_rooms/demo_action/
+[**demo_action**](https://dyarosla.github.io/firebase_qr_rooms/demo_action/): Action-based collecting-coins game.
 
 # To Setup
 
