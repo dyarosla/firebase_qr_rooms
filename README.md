@@ -1,23 +1,25 @@
 # Firebase QRRooms
 
-This repo provides a sample framework within which you can create multiplayer games that runs on one device and lets other users join the game by scanning a QR code using their device.
+This repo provides a sample framework within which you can create multiplayer games. Games run on one device and other users can join the game by scanning a QR code with their own device.
 
 # To Setup
 
-Create a firebase app.
-Create a real time database.
-Using your firebase credentials, update 'src/firebaseConfigSample.js', and rename it to 'src/firebaseConfig.js'.
-Update the database rules to those found in 'src/dbrules.json'.
-Turn on firebase auth and anonymous user accounts.
+- Create a firebase app. `https://firebase.google.com/`
+- Create a real time database.
+- Using your firebase credentials, update `src/firebaseConfigSample.js`, and rename it to `src/firebaseConfig.js`.
+- Update the database rules to those found in `src/dbrules.json`.
+- Turn on firebase auth and anonymous user accounts.
 
 # To Run Locally
 
-'cd' into the demo directory of your choice (demos explained below).
-You can use 'python -m SimpleHTTPServer' to set up a local server.
-Go to 'http://localhost:8000/' in your web browser.
+- Run `python -m SimpleHTTPServer` in the demo directory of your choice to set up a local server.
+- Go to `http://localhost:8000/` in your browser.
+- Scan the QR code generated with another device to join the demo room.
 
 ## Demos:
 
-demo_users: Bare bones implementation of creating a room and having users join/leave
-demo_words: Word-based word-find game
-demo_action: Action-based collecting-coins game
+**demo_users**: Basic sample of creating a room and having users join/leave
+
+**demo_words**: Word-based word-find game
+
+**demo_action**: Action-based collecting-coins game
